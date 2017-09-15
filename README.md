@@ -1,2 +1,2 @@
 # swen
-Simple Workflow Engine
+**S**imple **W**orkflow **EN**gine
