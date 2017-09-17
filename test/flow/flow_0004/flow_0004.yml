@@ -1,0 +1,16 @@
+version: 1.0
+id: "flow_0004"
+doc: "4-step flow"
+flow:
+- id: "Step 1"
+  doc: "Basic `ls` command without any flags and args"
+  step: ls
+- id: "Step 2"
+  doc: "Basic `date` command without any flags and args"
+  step: date
+- id: "Step 3"
+  doc: "Basic `chdir` command without any flags and args"
+  step: hostname
+- id: "Step 4"
+  doc: "Basic `lsblk` command without any flags and args"
+  step: lsblk

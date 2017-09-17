@@ -1,0 +1,7 @@
+version: 1.0
+id: "flow_0001"
+doc: "1-step flow"
+flow:
+- id: "Step 1"
+  doc: "Basic `ls` command without any flags and args"
+  step: ls

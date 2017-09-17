@@ -1,0 +1,11 @@
+version: 1.0
+id: "flow_0005"
+doc: "Basic 2-step flow with step 1 output passed as input to step 2"
+flow:
+- id: "Step 1"
+  doc: "Basic `ls` command without any flags and args"
+  step: ls
+- id: "Step 2"
+  doc: "Basic `sort` command with input produced by step 1"
+  step: sort
+  with_stdin: yes

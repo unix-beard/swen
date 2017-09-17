@@ -1,0 +1,13 @@
+version: 1.0
+id: "flow_0003"
+doc: "3-step flow"
+flow:
+- id: "Step 1"
+  doc: "Basic `ls` command without any flags and args"
+  step: ls
+- id: "Step 2"
+  doc: "Basic `date` command without any flags and args"
+  step: date
+- id: "Step 3"
+  doc: "Basic `cal` command without any flags and args"
+  step: cal

@@ -1,0 +1,16 @@
+version: 1.0
+id: "Self-testing swen"
+doc: "Execute all swen unit tests"
+flow:
+- id: StepTests 
+  doc: "Unit tests for Step class"
+  step: ./StepTests.py
+  on_failure: fail
+- id: FlowTests
+  doc: "Unit tests for Flow class"
+  step: ./FlowTests.py
+  on_failure: fail
+- id: FlowExecutionTests
+  doc: "Unit tests for FlowExecutor class"
+  step: ./FlowExecutorTests.py
+  on_failure: fail

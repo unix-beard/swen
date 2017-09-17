@@ -1,0 +1,11 @@
+version: 1.0
+id: "flow_0007"
+doc: "Recursive 1-step flow"
+flow:
+- id: start
+  step: flow/flow_0007/start.py
+- id: "call_me"
+  doc: "Let's call itself"
+  step: flow/flow_0007/call_me.py
+  on_success: call_me
+  with_stdin: yes
