@@ -28,7 +28,9 @@ class FlowTests(unittest.TestCase):
                       on_exit_code=None)
         j = '{\n' \
             '    "id": "Step with status=READY",\n' \
-            '    "step": "ls",\n'\
+            '    "step": [\n'\
+            '        "ls"\n'\
+            '    ],\n'\
             '    "doc": "(with_stdin: False)",\n' \
             '    "with_stdin": false,\n'\
             '    "on_success": null,\n'\
@@ -93,6 +95,17 @@ class FlowTests(unittest.TestCase):
         (exit_code, stdout, stderr) = s.execute(stdout=sort_stdin)
         self.assertEqual(exit_code, 1)
         self.assertTrue('"status": "TERMINATED"' in str(s))
+
+    def test_step_with_status_transitions(self):
+        def status_callback(current_status=None, new_status=None):
+            if current_status == 0:
+                self.assertEqual(new_status, 1)
+            elif current_status == 1:
+                self.assertEqual(new_status, 2)
+
+        s = step.Step(id="Step with status cachange callback", step="ls")
+        s.on_status_change = status_callback
+        s.execute()
 
 
 if __name__ == '__main__':

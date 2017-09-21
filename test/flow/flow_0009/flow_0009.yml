@@ -1,0 +1,9 @@
+version: 1.0
+id: "flow_0009"
+doc: "2-step flow with args"
+flow:
+- id: "Step 1"
+  step: echo "test with args"
+- id: "Step 2"
+  step: flow/flow_0009/s_1.py
+  with_stdin: yes

@@ -1,0 +1,9 @@
+version: 1.0
+id: "flow_0011"
+doc: "2-step flow with args"
+flow:
+- id: "Step 1"
+  step: find / -maxdepth 1 -type d
+- id: "Step 2"
+  step: grep /tmp
+  with_stdin: yes

@@ -1,0 +1,7 @@
+version: 1.0
+id: "flow_0008"
+doc: "1-step flow with args"
+flow:
+- id: "Step 1"
+  doc: "This step accepts args"
+  step: ls -al .

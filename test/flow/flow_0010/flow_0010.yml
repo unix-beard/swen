@@ -1,0 +1,15 @@
+version: 1.0
+id: "flow_0010"
+doc: "4-step flow with args"
+flow:
+- id: "Step 1"
+  step: echo "2 ^ 3"
+- id: "Step 2"
+  step: bc
+  with_stdin: yes
+- id: "Step 3"
+  step: awk '{print $1 " * 3"}'
+  with_stdin: yes
+- id: "Step 4"
+  step: bc
+  with_stdin: yes

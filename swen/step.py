@@ -1,6 +1,7 @@
 import logging
 import json
 import copy
+import shlex
 
 from subprocess import Popen, PIPE
 from enum import IntEnum
@@ -13,8 +14,9 @@ class Status(IntEnum):
     # TIMED_OUT = 3
 
 
-class EnumEncoder(json.JSONEncoder):
+class StepEncoder(json.JSONEncoder):
     status = 'status'
+    on_status_change = 'on_status_change'
 
     def encode(self, obj):
         obj_copy = copy.copy(obj)
@@ -23,8 +25,11 @@ class EnumEncoder(json.JSONEncoder):
             if k.startswith('_'):
                 obj_copy[k.replace('_', '', 1)] = obj_copy.pop(k)
 
-        if EnumEncoder.status in obj_copy and type(obj_copy[EnumEncoder.status]) is Status:
-            obj_copy[EnumEncoder.status] = str(obj_copy[EnumEncoder.status].name)
+        if StepEncoder.status in obj_copy and type(obj_copy[StepEncoder.status]) is Status:
+            obj_copy[StepEncoder.status] = str(obj_copy[StepEncoder.status].name)
+        if StepEncoder.on_status_change in obj_copy and callable(obj_copy[StepEncoder.on_status_change]):
+            obj_copy[StepEncoder.on_status_change] = obj_copy[StepEncoder.on_status_change].__name__
+
         return json.JSONEncoder.encode(self, obj_copy)
 
 
@@ -36,7 +41,7 @@ class Step:
     def __init__(self, id=None, step=None, doc=None, with_stdin=False,
                  on_success=None, on_failure=None, on_exit_code=None):
         self._id = id
-        self._step = step
+        self._step = None if step is None else shlex.split(step)
         self._doc = doc
         self._with_stdin = with_stdin
         self._on_success = on_success
@@ -101,10 +106,9 @@ class Step:
     def on_status_change(self, callback):
         self._on_status_change = callback
 
-    def execute(self, exit_code=None, stdout=None, stderr=None, on_status_change=None):
+    def execute(self, exit_code=None, stdout=None, stderr=None):
         logging.debug("Executing step: {}, exit_code={!r}, stdout={!r}, stderr={!r}".format(self, exit_code, stdout, stderr))
 
-        self.on_status_change = on_status_change
         self.status = Status.RUNNING
 
         if self.with_stdin:
@@ -133,4 +137,4 @@ class Step:
         self.status = status
 
     def __str__(self):
-        return json.dumps(self.__dict__, cls=EnumEncoder, indent=4)
+        return json.dumps(self.__dict__, cls=StepEncoder, indent=4)
