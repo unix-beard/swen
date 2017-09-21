@@ -1,0 +1,9 @@
+version: 1.0
+id: "flow_0012"
+doc: "2-step flow with args"
+flow:
+- id: "Step 1"
+  step: printf "1\n2\n3\n4\n"
+- id: "Step 2"
+  step: wc -l
+  with_stdin: yes
