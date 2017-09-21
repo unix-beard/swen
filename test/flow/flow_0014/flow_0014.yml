@@ -1,0 +1,13 @@
+version: 1.0
+id: "flow_0014"
+doc: "Flow with args"
+flow:
+- id: "Step 1"
+  doc: "Fail this step"
+  step: /bin/false
+- id: "Step 2"
+  doc: "We shouldn't get here"
+  step: ls
+- id: "Step 3"
+  doc: "...and here, otherwise we'll get stuck"
+  step: perl

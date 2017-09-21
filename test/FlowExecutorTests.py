@@ -102,6 +102,11 @@ class FlowTests(unittest.TestCase):
         self.assertEqual(str(stdout, 'utf-8'), '10\n')
         self.assertEqual(exit_code, 0)
 
+    def test_flow_0014(self):
+        flow_id = "flow_0014"
+        (exit_code, stdout, stderr) = self._call_flow_executor(flow_id)
+        self.assertEqual(exit_code, 1)
+
     def _call_flow_executor(self, flow_id):
         yml_path = self.flow_dir + "/" + "{}/{}.yml".format(flow_id, flow_id)
         logging.info("Testing flow: id={!r}, yaml={!r}".format(flow_id, yml_path))
