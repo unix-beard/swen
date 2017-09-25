@@ -1,5 +1,6 @@
 #include <cstdio>
 #include <cstring>
+#include <string>
 #include <unistd.h>
 #include <sys/types.h> 
 #include <sys/socket.h>
@@ -8,22 +9,39 @@
 #include <map>
 #include <functional>
 #include <iostream>
+#include <optional>
 
 
-void wiypid(const std::string& s)
+using response_t = std::optional<std::string>;
+using command_handler_t = std::function<response_t(const std::string&)>;
+
+
+response_t
+wiypid(const std::string& s)
 {
-    std::cout << "Handling wiypid command\n";
-    std::cout << "My process ID: " << getpid() << "\n";
+    std::cout << "Handling `wiypid` command\n";
+    int my_pid = getpid();
+    std::cout << "My process ID: " << my_pid << "\n";
+    return std::make_optional(std::to_string(my_pid));
 }
 
-void bye(const std::string& s)
+response_t
+bye(const std::string& s)
 {
-    std::cout << "Handling bye command\n";
+    std::cout << "Handling `bye` command\n";
     exit(0);
 }
 
-std::map<std::string, std::function<void(const std::string&)>> command_handler = { 
+response_t
+dummy(const std::string& s)
+{
+    std::cout << "Handling `dummy` command\n";
+    return {};
+}
+
+std::map<std::string, command_handler_t> command_handler = { 
     {"bye", bye},
+    {"dummy", dummy},
     {"wiypid", wiypid}
 };
 
@@ -73,11 +91,17 @@ public:
 
             std::string msg(buffer);
             std::cout << "Here is the message: " << msg << "\n";
-            n = write(newsock_,"I got your message", 18);
-            command_handler[msg](msg);
+
+            response_t resp = command_handler[msg](msg);
+            if (resp)
+            {
+                std::string val = *resp;
+                n = write(newsock_, val.c_str(), val.size());
+            }
 
             if (n < 0)
                 throw std::runtime_error("Can't write to socket");
+
          }
     }
 
