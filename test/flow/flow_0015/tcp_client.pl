@@ -16,9 +16,13 @@ die "cannot connect to the server $!\n" unless $socket;
 
 print "connected to the server\n";
               
-# data to send to a server
+# Command to send to a server
+
 #my $req = 'wiypid';
+#my $req = 'dummy';
 my $req = 'bye';
+#my $req = 'ping';
+
 my $size = $socket->send($req);
 print "sent data of length $size\n";
  

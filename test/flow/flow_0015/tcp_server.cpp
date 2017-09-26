@@ -1,12 +1,16 @@
+#include <unistd.h>
+#include <syslog.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <fcntl.h>
+#include <netinet/in.h>
+#include <signal.h>
 #include <cstdio>
 #include <cstring>
 #include <string>
-#include <unistd.h>
-#include <sys/types.h> 
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <stdexcept>
 #include <map>
+#include <stdexcept>
 #include <functional>
 #include <iostream>
 #include <optional>
@@ -19,29 +23,37 @@ using command_handler_t = std::function<response_t(const std::string&)>;
 response_t
 wiypid(const std::string& s)
 {
-    std::cout << "Handling `wiypid` command\n";
-    int my_pid = getpid();
-    std::cout << "My process ID: " << my_pid << "\n";
+    syslog(LOG_INFO, "Handling `wiypid` command");
+    pid_t my_pid = getpid();
+    syslog(LOG_INFO, "My PID: %d", my_pid);
     return std::make_optional(std::to_string(my_pid));
 }
 
 response_t
 bye(const std::string& s)
 {
-    std::cout << "Handling `bye` command\n";
+    syslog(LOG_INFO, "Handling `bye` command");
     exit(0);
 }
 
 response_t
 dummy(const std::string& s)
 {
-    std::cout << "Handling `dummy` command\n";
+    syslog(LOG_INFO, "Handling `dummy` command");
     return {};
+}
+
+response_t
+ping(const std::string& s)
+{
+    syslog(LOG_INFO, "Handling `ping` command. Responding with `pong`");
+    return std::make_optional("pong");
 }
 
 std::map<std::string, command_handler_t> command_handler = { 
     {"bye", bye},
     {"dummy", dummy},
+    {"ping", ping},
     {"wiypid", wiypid}
 };
 
@@ -63,6 +75,8 @@ public:
 
         if (bind(sock_, (struct sockaddr*) &srv_addr_, sizeof(srv_addr_)) < 0) 
             throw std::runtime_error("Can't bind");
+
+        syslog(LOG_INFO, "Server started (pid: %d, listening on port: %d)", getpid(), port_);
     }
 
     ~TcpServer()
@@ -90,9 +104,10 @@ public:
                 throw std::runtime_error("Can't read from socket");
 
             std::string msg(buffer);
-            std::cout << "Here is the message: " << msg << "\n";
+            syslog(LOG_INFO, "Message: %s", msg.c_str());
 
             response_t resp = command_handler[msg](msg);
+
             if (resp)
             {
                 std::string val = *resp;
@@ -101,7 +116,6 @@ public:
 
             if (n < 0)
                 throw std::runtime_error("Can't write to socket");
-
          }
     }
 
@@ -113,9 +127,57 @@ private:
     struct sockaddr_in cli_addr_;
 };
 
+void daemonize()
+{
+    pid_t pid = fork();
+
+    if (pid < 0)
+        exit(EXIT_FAILURE);
+
+    if (pid > 0)
+        exit(EXIT_SUCCESS);
+
+    if (setsid() < 0)
+        exit(EXIT_FAILURE);
+
+    // TODO: Setup signal handlers here
+
+    pid = fork();
+
+    if (pid < 0)
+        exit(EXIT_FAILURE);
+
+    if (pid > 0)
+        exit(EXIT_SUCCESS);
+
+    umask(0);
+    chdir("/");
+
+    int dev_null_fd;
+    if (dev_null_fd = open("/dev/null", O_RDWR))
+    {
+        dup2 (dev_null_fd, STDIN_FILENO);
+        dup2 (dev_null_fd, STDOUT_FILENO);
+        dup2 (dev_null_fd, STDERR_FILENO);
+        close(dev_null_fd);
+    }
+}
 
 int main(int argc, char *argv[])
 {
-    TcpServer tcp_server;
-    tcp_server.serve();
+    daemonize();
+
+    setlogmask(LOG_UPTO (LOG_INFO));
+    openlog("tcp_server", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL1);
+    try
+    {
+        TcpServer tcp_server;
+        tcp_server.serve();
+    }
+    catch (std::exception& ex)
+    {
+        syslog(LOG_ERR, "Exception: %s", ex.what());
+    }
+
+    closelog();
 }
