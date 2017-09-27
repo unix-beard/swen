@@ -1,6 +1,14 @@
 #!/usr/bin/env perl
 
 use IO::Socket::INET;
+use Getopt::Long;
+
+
+# Command to send to a server
+my $command = 'ping';
+
+GetOptions("command|c=s" => \$command)
+    or die("Error in command line arguments");
  
 # auto-flush on socket
 $| = 1;
@@ -12,19 +20,12 @@ my $socket = new IO::Socket::INET (
     Proto => 'tcp',
 );
 
-die "cannot connect to the server $!\n" unless $socket;
+die "cannot connect to the server: $!\n" unless $socket;
 
 print "connected to the server\n";
               
-# Command to send to a server
-
-#my $req = 'wiypid';
-#my $req = 'dummy';
-my $req = 'bye';
-#my $req = 'ping';
-
-my $size = $socket->send($req);
-print "sent data of length $size\n";
+my $size = $socket->send($command);
+print "sent command [$command] of length $size\n";
  
 # notify server that request has been sent
 shutdown($socket, 1);
@@ -33,5 +34,5 @@ shutdown($socket, 1);
 my $response = "";
 $socket->recv($response, 1024);
 print "received response: $response\n";
-   
+ 
 $socket->close();

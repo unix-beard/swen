@@ -4,6 +4,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <fcntl.h>
+#include <dlfcn.h>
 #include <netinet/in.h>
 #include <signal.h>
 #include <cstdio>
@@ -14,10 +15,12 @@
 #include <functional>
 #include <iostream>
 #include <optional>
+#include "plugin_command.h"
 
 
 using response_t = std::optional<std::string>;
 using command_handler_t = std::function<response_t(const std::string&)>;
+using builtin_command_t = std::map<std::string, command_handler_t>;
 
 
 response_t
@@ -50,7 +53,8 @@ ping(const std::string& s)
     return std::make_optional("pong");
 }
 
-std::map<std::string, command_handler_t> command_handler = { 
+
+builtin_command_t command_handler = { 
     {"bye", bye},
     {"dummy", dummy},
     {"ping", ping},
@@ -58,11 +62,86 @@ std::map<std::string, command_handler_t> command_handler = {
 };
 
 
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// PLUGIN COMMAND HANDLER 
+///////////////////////////////////////////////////////////////////////////////////////////////////
+class PluginCommandHandler
+{
+public:
+    PluginCommandHandler(const std::string& plugin_path = "./")
+        : plugin_path_(plugin_path)
+    {}
+
+    ~PluginCommandHandler()
+    {
+        for (auto& it : plugin_dl)
+        {
+            syslog(LOG_INFO, "Unloading plugin command: [%s]", it.first.c_str());
+            destroy_t* destroy_plugin = (destroy_t*) dlsym(it.second, "destroy");
+            const char* dlsym_error = dlerror();
+            if (dlsym_error)
+            {
+                syslog(LOG_ERR, "%s", dlsym_error);
+                continue;
+            }
+
+            destroy_plugin(plugin_cache_[it.first]);
+            dlclose(it.second);
+        }
+    }
+
+    response_t
+    handle(const std::string& command)
+    {
+        if (is_loaded(command))
+        {
+            syslog(LOG_INFO, "Plugin command (%s) already loaded. Using plugin cache.", command.c_str());
+            return plugin_cache_[command]->handle(command);
+        }
+
+        std::string cmd_path = plugin_path_ + command + ".so";
+        void* plugin = dlopen(cmd_path.c_str(), RTLD_LAZY);
+
+        if (!plugin)
+            throw std::runtime_error(dlerror());
+
+        // reset errors
+        dlerror();
+        
+        // load the symbols
+        create_t* create_plugin = (create_t*) dlsym(plugin, "create");
+        const char* dlsym_error = dlerror();
+        if (dlsym_error)
+            throw std::runtime_error(dlsym_error);
+        
+        PluginCommand* p = create_plugin();
+        plugin_cache_[command] = p;
+        plugin_dl[command] = plugin;
+        return p->handle(command);
+    }
+
+private:
+    bool
+    is_loaded(const std::string& command)
+    {
+        return plugin_cache_.find(command) != plugin_cache_.end(); 
+    }
+
+    std::string plugin_path_;
+    std::map<std::string, PluginCommand*> plugin_cache_;
+    std::map<std::string, void*> plugin_dl;
+};
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// TCP SERVER
+///////////////////////////////////////////////////////////////////////////////////////////////////
 class TcpServer
 {
 public:
-    explicit TcpServer(unsigned short port = 41234)
-        : port_(port)
+    TcpServer(const builtin_command_t& builtins, unsigned short port = 41234)
+        : builtins_(builtins), port_(port)
     {
         sock_ = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -85,7 +164,8 @@ public:
         close(sock_);
     }
 
-    void serve()
+    void
+    serve()
     {
         for (;;)
         {
@@ -106,7 +186,9 @@ public:
             std::string msg(buffer);
             syslog(LOG_INFO, "Message: %s", msg.c_str());
 
-            response_t resp = command_handler[msg](msg);
+            response_t resp = {};
+            
+            resp = (is_builtin_command(msg)) ? handle_builtin_command(msg) : handle_plugin_command(msg);
 
             if (resp)
             {
@@ -120,6 +202,38 @@ public:
     }
 
 private:
+    bool
+    is_builtin_command(const std::string& cmd)
+    {
+        return builtins_.find(cmd) != builtins_.end();
+    }
+
+    response_t
+    handle_builtin_command(const std::string& msg)
+    {
+        syslog(LOG_INFO, "Handling built-in command: [%s]", msg.c_str());
+        return builtins_[msg](msg);
+    }
+
+    response_t
+    handle_plugin_command(const std::string& msg)
+    {
+        try
+        {
+            syslog(LOG_INFO, "Handling plugin command: [%s]", msg.c_str());
+            return plugin_handler_.handle(msg);
+        }
+        catch (std::exception& ex)
+        {
+            syslog(LOG_ERR, "%s", ex.what());
+        }
+
+        return {};
+    }
+
+    builtin_command_t builtins_;
+    PluginCommandHandler plugin_handler_;
+
     int sock_;
     int newsock_;
     unsigned short port_;
@@ -127,7 +241,11 @@ private:
     struct sockaddr_in cli_addr_;
 };
 
-void daemonize()
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+void
+daemonize()
 {
     pid_t pid = fork();
 
@@ -151,10 +269,10 @@ void daemonize()
         exit(EXIT_SUCCESS);
 
     umask(0);
-    chdir("/");
+    //chdir("/");
 
     int dev_null_fd;
-    if (dev_null_fd = open("/dev/null", O_RDWR))
+    if ((dev_null_fd = open("/dev/null", O_RDWR)))
     {
         dup2 (dev_null_fd, STDIN_FILENO);
         dup2 (dev_null_fd, STDOUT_FILENO);
@@ -163,15 +281,18 @@ void daemonize()
     }
 }
 
-int main(int argc, char *argv[])
+
+int
+main(int argc, char *argv[])
 {
     daemonize();
 
     setlogmask(LOG_UPTO (LOG_INFO));
     openlog("tcp_server", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL1);
+
     try
     {
-        TcpServer tcp_server;
+        TcpServer tcp_server = TcpServer(command_handler);
         tcp_server.serve();
     }
     catch (std::exception& ex)
