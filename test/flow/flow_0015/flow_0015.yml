@@ -1,0 +1,20 @@
+version: 1.0
+id: "flow_0015"
+doc: "Relatively complex flow"
+flow:
+- id: "Step 1"
+  doc: "Compile tcp_server"
+  step: make -C flow/flow_0015
+- id: "Step 2"
+  doc: "Run tcp_server"
+  step: flow/flow_0015/tcp_server
+- id: "Step 3"
+  doc: "Execute dummy_plugin"
+  step: flow/flow_0015/tcp_client.pl -c flow/flow_0015/dummy_plugin
+- id: "Step 4"
+  doc: "Grep output"
+  step: grep "Hello from dummy plugin"
+  with_stdin: yes
+- id: "Step 5"
+  doc: "Terminate tcp_server"
+  step: flow/flow_0015/tcp_client.pl -c bye
