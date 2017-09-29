@@ -1,4 +1,5 @@
 from . import flow
+import logging
 
 
 class FlowExecutor:
@@ -16,8 +17,10 @@ class FlowExecutor:
             if step.step is not None:
                 (exit_code, stdout, stderr) = step.execute(exit_code=exit_code, stdout=stdout, stderr=stderr)
                 
+                logging.debug("Executed step: {}, exit_code={!r}, stdout={!r}, stderr={!r}".format(step.id, exit_code, stdout, stderr))
+
                 # Terminate the flow if the step exit code is not success
-                # and we don't have on_failure transition set explicitly on that set
+                # and we don't have on_failure transition set explicitly on that step
                 if exit_code != 0 and step.on_failure is None:
                     break
 
