@@ -1,6 +1,22 @@
 import yaml
+import json
+import copy
 import logging
 from . import step
+
+
+class FlowEncoder(json.JSONEncoder):
+    def encode(self, obj):
+        obj_copy = copy.copy(obj)
+
+        for k in obj.keys():
+            if k.startswith('_'):
+                obj_copy[k.replace('_', '', 1)] = obj_copy.pop(k)
+
+        if "steps" in obj_copy: 
+            obj_copy["steps"] = {s: json.loads(str(obj_copy["steps"][s])) for s in obj_copy["steps"]}
+
+        return json.JSONEncoder.encode(self, obj_copy)
 
 
 class Flow:
@@ -10,6 +26,8 @@ class Flow:
 
     def __init__(self, data):
         self._parsed_yaml = self._parse_yaml(data)
+        self._id = self._parsed_yaml['id'] if 'id' in self._parsed_yaml else None
+        self._doc = self._parsed_yaml['doc'] if 'doc' in self._parsed_yaml else None
         self._steps = self._create_steps(self._parsed_yaml['flow']) if 'flow' in self._parsed_yaml else {}
         self._current_step = None
 
@@ -95,3 +113,6 @@ class Flow:
             self._current_step = self._steps[next_step_id]
             logging.debug('Next step: {!r}'.format(self._current_step.id))
             yield self._current_step
+
+    def __str__(self):
+        return json.dumps(self.__dict__, cls=FlowEncoder, indent=4)
