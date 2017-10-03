@@ -14,7 +14,8 @@ class FlowEncoder(json.JSONEncoder):
                 obj_copy[k.replace('_', '', 1)] = obj_copy.pop(k)
 
         if "steps" in obj_copy: 
-            obj_copy["steps"] = {s: json.loads(str(obj_copy["steps"][s])) for s in obj_copy["steps"]}
+            steps = obj_copy["steps"]
+            obj_copy["steps"] = {s: json.loads(str(steps[s])) for s in steps}
 
         return json.JSONEncoder.encode(self, obj_copy)
 
