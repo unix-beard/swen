@@ -29,6 +29,7 @@ class FlowTests(unittest.TestCase):
         self.assertEqual(stdout, None)
         self.assertEqual(stderr, None)
 
+
     def test_flow_0001(self):
         flow_id = "flow_0001"
         (exit_code, stdout, stderr) = self._call_flow_executor(flow_id)
@@ -107,6 +108,23 @@ class FlowTests(unittest.TestCase):
         (exit_code, stdout, stderr) = self._call_flow_executor(flow_id)
         self.assertEqual(exit_code, 1)
 
+    def test_flow_0000_with_execution_graph(self):
+        flow_id = "flow_0000"
+        eg = self._call_flow_executor_execution_graph(flow_id)
+        self.assertEqual(eg, [])
+
+    def test_flow_0001_with_execution_graph(self):
+        flow_id = "flow_0001"
+        eg = self._call_flow_executor_execution_graph(flow_id)
+        self.assertEqual(len(eg), 1)
+        for s in [str(s) for s in eg]:
+            self.assertTrue("TERMINATED" in s)
+
+    def test_flow_0016_with_execution_graph(self):
+        flow_id = "flow_0016"
+        eg = self._call_flow_executor_execution_graph(flow_id)
+        self.assertEqual(len(eg), 2)
+
     def _call_flow_executor(self, flow_id):
         yml_path = self.flow_dir + "/" + "{}/{}.yml".format(flow_id, flow_id)
         logging.info("Testing flow: id={!r}, yaml={!r}".format(flow_id, yml_path))
@@ -114,6 +132,13 @@ class FlowTests(unittest.TestCase):
             fe = flowexecutor.FlowExecutor(yml) 
             return fe.execute()
 
+    def _call_flow_executor_execution_graph(self, flow_id):
+        yml_path = self.flow_dir + "/" + "{}/{}.yml".format(flow_id, flow_id)
+        logging.info("Testing flow: id={!r}, yaml={!r}".format(flow_id, yml_path))
+        with open(yml_path) as yml:
+            fe = flowexecutor.FlowExecutor(yml) 
+            fe.execute()
+        return fe.execution_graph
 
 if __name__ == '__main__':
     unittest.main()

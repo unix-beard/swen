@@ -95,6 +95,24 @@ PARSED_YAML_0 = {
     'id': 'id-test'
 }
 
+YAML_WITH_VARS = """
+version: 1.0
+id: Flow with vars
+doc: Flow with vars
+vars:
+  var1: val1
+  var2: val2
+"""
+
+YAML_WITH_DUP_VARS = """
+version: 1.0
+id: Flow with vars
+doc: Flow with vars
+vars:
+  var1: val1
+vars:
+  var2: val2
+"""
 
 YAML = [
     (YAML_1_STEP, PARSED_YAML_0),
@@ -162,6 +180,14 @@ class FlowTests(unittest.TestCase):
         f = flow.Flow(YAML_4_STEPS)
         print("Flow {} as JSON:\n".format(f._id))
         print(str(f))
+
+    def test_flow_with_vars(self):
+        f = flow.Flow(YAML_WITH_VARS)
+        self.assertEqual(f._flow_vars, {'var1': 'val1', 'var2': 'val2'})
+
+    def test_flow_with_dup_vars(self):
+        f = flow.Flow(YAML_WITH_DUP_VARS)
+        self.assertEqual(f._flow_vars, {'var2': 'val2'})
 
 if __name__ == '__main__':
     unittest.main()
