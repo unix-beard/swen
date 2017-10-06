@@ -1,0 +1,6 @@
+version: 1.0
+id: "flow_0016"
+doc: "Dummy steps"
+flow:
+- id: "Step 1"
+- id: "Step 2"

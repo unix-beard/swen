@@ -9,11 +9,14 @@ class FlowExecutor:
 
     def __init__(self, yaml_data):
         self.flow = flow.Flow(yaml_data)
+        self._execution_graph = []
 
     def execute(self):
         (exit_code, stdout, stderr) = None, None, None
 
         for step in self.flow.next_step():
+            self._execution_graph.append(step)
+
             if step.step is not None:
                 (exit_code, stdout, stderr) = step.execute(exit_code=exit_code, stdout=stdout, stderr=stderr)
                 
@@ -25,3 +28,7 @@ class FlowExecutor:
                     break
 
         return (exit_code, stdout, stderr)
+
+    @property
+    def execution_graph(self):
+        return self._execution_graph
