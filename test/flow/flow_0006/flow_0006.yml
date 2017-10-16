@@ -1,17 +1,25 @@
 version: 1.0
-id: "flow_0006"
+vars:
+  root: flow
+  flow_id: flow_0006
+  # Currently there is a limitation
+  # in expanding variables inside `var` section, so doing:
+  # path: $root/$flow_id
+  # is not currently possible
+  path: flow/flow_0006
+id: $flow_id
 doc: "4-step flow"
 flow:
 - id: "Step 1"
   doc: "This step always fails!"
-  step: flow/flow_0006/s_1.py
+  step: $path/s_1.py
   on_failure: "Step 3"
 - id: "Step 2"
   doc: "This step is never executed!"
-  step: flow/flow_0006/s_2.py
+  step: $path/s_2.py
 - id: "Step 3"
   doc: "This step handles input from step 1"
-  step: flow/flow_0006/s_3.py
+  step: $path/s_3.py
   with_stdin: yes
 - id: "Step 4"
   doc: "This step checks output from step 3"

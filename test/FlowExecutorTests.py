@@ -125,6 +125,12 @@ class FlowTests(unittest.TestCase):
         eg = self._call_flow_executor_execution_graph(flow_id)
         self.assertEqual(len(eg), 2)
 
+    def test_flow_0017_with_var_substitution(self):
+        flow_id = "flow_0017"
+        (exit_code, stdout, stderr) = self._call_flow_executor(flow_id)
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(str(stdout, "utf-8"), "hello world\n")
+
     def _call_flow_executor(self, flow_id):
         yml_path = self.flow_dir + "/" + "{}/{}.yml".format(flow_id, flow_id)
         logging.info("Testing flow: id={!r}, yaml={!r}".format(flow_id, yml_path))

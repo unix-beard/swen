@@ -131,10 +131,10 @@ class FlowTests(unittest.TestCase):
         print(str(f))
 
     def test_yaml_as_file(self):
-        with tempfile.NamedTemporaryFile() as tmp_file:
-            tmp_file.write(YAML_1_STEP.encode('utf-8'))
+        with tempfile.NamedTemporaryFile(mode='w+') as tmp_file:
+            tmp_file.write(YAML_1_STEP)
             tmp_file.seek(0)
-            f = flow.Flow(tmp_file)
+            f = flow.Flow(tmp_file.file)
             self.assertEqual(f.parsed_yaml, YAML[0][1])
 
     def test_flow_with_no_flow(self):

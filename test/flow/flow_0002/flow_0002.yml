@@ -1,10 +1,13 @@
 version: 1.0
 id: "flow_0002"
 doc: "2-step flow"
+vars:
+  ls_cmd: ls
+  date_cmd: date
 flow:
 - id: "Step 1"
-  doc: "Basic `ls` command without any flags and args"
-  step: ls
+  doc: "Basic `$ls_cmd` command without any flags and args"
+  step: $ls_cmd
 - id: "Step 2"
-  doc: "Basic `date` command without any flags and args"
-  step: date
+  doc: "Basic `$date_cmd` command without any flags and args"
+  step: $date_cmd

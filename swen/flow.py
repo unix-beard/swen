@@ -1,8 +1,9 @@
 import yaml
-from yaml import ScalarEvent, MappingStartEvent, MappingEndEvent
 import json
 import copy
 import logging
+import io
+from Cheetah.Template import Template
 from . import step
 
 
@@ -18,6 +19,9 @@ class FlowEncoder(json.JSONEncoder):
             steps = obj_copy["steps"]
             obj_copy["steps"] = {s: json.loads(str(steps[s])) for s in steps}
 
+        if "template" in obj_copy:
+            obj_copy["template"] = ""
+
         return json.JSONEncoder.encode(self, obj_copy)
 
 
@@ -27,8 +31,18 @@ class Flow:
     """
 
     def __init__(self, data):
-        self._flow_vars = None
         self._parsed_yaml = self._parse_yaml(data)
+        self._flow_vars = self._parsed_yaml['vars'] if 'vars' in self._parsed_yaml else None
+
+        if issubclass(type(data), io.IOBase):
+            data.seek(0)
+            self._template = Template(file=data, searchList=[self._flow_vars])
+        else:
+            self._template = Template(source=data, searchList=[self._flow_vars])
+
+        logging.debug("Template after variable substitution:\n{}".format(str(self._template)))
+
+        self._parsed_yaml = self._parse_yaml(str(self._template))
         self._id = self._parsed_yaml['id'] if 'id' in self._parsed_yaml else None
         self._doc = self._parsed_yaml['doc'] if 'doc' in self._parsed_yaml else None
         self._steps = self._create_steps(self._parsed_yaml['flow']) if 'flow' in self._parsed_yaml else {}
@@ -38,26 +52,7 @@ class Flow:
     def parsed_yaml(self):
         return self._parsed_yaml
 
-    def _get_flow_vars(self, data):
-        scalars, seq = [], []
-        mapping_start_event = False
-
-        for e in yaml.parse(data):
-            if type(e) is ScalarEvent and e.value == "vars":
-                seq.append(e)
-            elif type(e) is MappingStartEvent and seq != []:
-                mapping_start_event = True
-            elif mapping_start_event and type(e) is ScalarEvent:
-                scalars.append(e.value)
-            elif type(e) is MappingEndEvent and mapping_start_event:
-                i = iter(scalars)
-                self._flow_vars = dict(zip(i, i))
-                scalars = []
-                seq.pop()
-                mapping_start_event = False
-
     def _parse_yaml(self, data):
-        self._get_flow_vars(data)
         parsed_yaml = yaml.load(data)
         logging.debug("Parsed YAML: {}".format(parsed_yaml))
         return parsed_yaml
